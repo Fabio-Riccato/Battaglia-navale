@@ -41,33 +41,26 @@ class _SchermataGiocoState extends State<SchermataGioco> {
             mioTurno = msg['mioTurno'] ?? false;
             _aggiornaStatoTestuale();
             break;
-
           case 'RISULTATO':
-            msg['hit']
-                ? colpiFatti.add(msg['cella'])
-                : acquaFatti.add(msg['cella']);
+            msg['hit'] ? colpiFatti.add(msg['cella']) : acquaFatti.add(msg['cella']);
             break;
-
           case 'SUBITO':
-            msg['hit']
-                ? colpiSubiti.add(msg['cella'])
-                : acquaSubiti.add(msg['cella']);
+            msg['hit'] ? colpiSubiti.add(msg['cella']) : acquaSubiti.add(msg['cella']);
             break;
-
           case 'AFFONDATA':
             naviAffondateAvversario.addAll((msg['celle'] as List).cast<int>());
             break;
-
           case 'PERSA':
             mieNaviAffondate.addAll((msg['celle'] as List).cast<int>());
             break;
-
           case 'VITTORIA':
             _mostraPopupFine("Hai Vinto!", "Hai affondato la flotta nemica!");
             break;
-
           case 'SCONFITTA':
             _mostraPopupFine("Hai Perso...", "La tua flotta è stata distrutta.");
+            break;
+          case 'AVVERSARIO_USCITO':
+            _mostraPopupFine("Vittoria a tavolino", "L'avversario ha abbandonato la partita.");
             break;
         }
       });
@@ -80,6 +73,7 @@ class _SchermataGiocoState extends State<SchermataGioco> {
         : "Turno di ${widget.servizio.nicknameAvversario}...";
   }
 
+  // Popup per vittoria, sconfitta o avversario uscito
   void _mostraPopupFine(String titolo, String msg) {
     showDialog(
       context: context,
@@ -89,8 +83,7 @@ class _SchermataGiocoState extends State<SchermataGioco> {
         content: Text(msg),
         actions: [
           ElevatedButton(
-            onPressed: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
+            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
             child: const Text("Torna alla home"),
           )
         ],
@@ -98,22 +91,43 @@ class _SchermataGiocoState extends State<SchermataGioco> {
     );
   }
 
+  // Popup di conferma uscita (tasto indietro)
+  Future<void> _confermaUscita() async {
+    final esci = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Sei sicuro di voler uscire?"),
+        content: const Text("Se esci ora perderai la partita."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("No"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Sì, esci", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (esci == true) {
+      widget.servizio.abbandona();
+      if (mounted) Navigator.popUntil(context, (r) => r.isFirst);
+    }
+  }
+
   void spara(int cella) {
-    if (!mioTurno ||
-        colpiFatti.contains(cella) ||
-        acquaFatti.contains(cella)) return;
+    if (!mioTurno || colpiFatti.contains(cella) || acquaFatti.contains(cella)) return;
     widget.servizio.spara(cella);
   }
 
-  /// ==========================
-  /// GRIGLIA RIDIMENSIONATA
-  /// ==========================
   Widget griglia({required bool isDifesa, Function(int)? tap}) {
     const lettere = ['A','B','C','D','E','F','G','H','I','J'];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // ⬇ dimensione massima della griglia
         final double lato = (constraints.maxWidth * 0.9).clamp(220, 300);
 
         return Center(
@@ -121,7 +135,6 @@ class _SchermataGiocoState extends State<SchermataGioco> {
             width: lato + 30,
             child: Column(
               children: [
-                // Lettere
                 Row(
                   children: [
                     const SizedBox(width: 30),
@@ -132,11 +145,9 @@ class _SchermataGiocoState extends State<SchermataGioco> {
                     )),
                   ],
                 ),
-
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Numeri
                     SizedBox(
                       width: 30,
                       child: Column(
@@ -146,8 +157,6 @@ class _SchermataGiocoState extends State<SchermataGioco> {
                         )),
                       ),
                     ),
-
-                    // Griglia
                     SizedBox(
                       width: lato,
                       height: lato,
@@ -207,42 +216,47 @@ class _SchermataGiocoState extends State<SchermataGioco> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Battaglia in corso')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            Text(stato, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
+    // FIX PROBLEMA 1: PopScope intercetta il tasto indietro
+    return PopScope(
+      canPop: false, // Disabilita l'uscita automatica
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _confermaUscita();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Battaglia in corso')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Text(stato, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
 
-            const Text("DIFESA"),
-            griglia(isDifesa: true),
+              const Text("DIFESA"),
+              griglia(isDifesa: true),
 
-            const SizedBox(height: 20),
-            const Divider(),
+              const SizedBox(height: 20),
+              const Divider(),
 
-            const Text("ATTACCO"),
-            griglia(isDifesa: false, tap: spara),
+              const Text("ATTACCO"),
+              griglia(isDifesa: false, tap: spara),
 
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () {
-                  widget.servizio.abbandona();
-                  Navigator.popUntil(context, (r) => r.isFirst);
-                },
-                child: const Text(
-                  "ABBANDONA PARTITA",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: _confermaUscita,
+                  child: const Text(
+                    "ABBANDONA PARTITA",
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
