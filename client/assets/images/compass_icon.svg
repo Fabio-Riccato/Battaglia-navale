@@ -1,0 +1,33 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <g>
+        <!-- Outer circle -->
+        <circle cx="50" cy="50" r="45" fill="none" stroke="#1565C0" stroke-width="3"/>
+        <circle cx="50" cy="50" r="42" fill="#E3F2FD"/>
+
+        <!-- Cardinal directions -->
+        <text x="50" y="18" text-anchor="middle" font-size="14" font-weight="bold" fill="#0D47A1">N</text>
+        <text x="82" y="54" text-anchor="middle" font-size="14" font-weight="bold" fill="#1976D2">E</text>
+        <text x="50" y="88" text-anchor="middle" font-size="14" font-weight="bold" fill="#1976D2">S</text>
+        <text x="18" y="54" text-anchor="middle" font-size="14" font-weight="bold" fill="#1976D2">W</text>
+
+        <!-- Degree marks -->
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#42A5F5" stroke-width="1" stroke-dasharray="2,3"/>
+
+        <!-- Compass needle (pointing North) -->
+        <g transform="rotate(0 50 50)">
+            <!-- North half (red) -->
+            <path d="M50,20 L56,50 L50,48 L44,50 Z" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+            <!-- South half (white) -->
+            <path d="M50,80 L56,50 L50,52 L44,50 Z" fill="#ecf0f1" stroke="#95a5a6" stroke-width="1"/>
+        </g>
+
+        <!-- Center pin -->
+        <circle cx="50" cy="50" r="4" fill="#2c3e50" stroke="#1565C0" stroke-width="1.5"/>
+
+        <!-- Decorative corner stars -->
+        <circle cx="50" cy="7" r="2" fill="#FFD700"/>
+        <circle cx="93" cy="50" r="2" fill="#FFD700"/>
+        <circle cx="50" cy="93" r="2" fill="#FFD700"/>
+        <circle cx="7" cy="50" r="2" fill="#FFD700"/>
+    </g>
+</svg>

@@ -1,0 +1,28 @@
+<svg width="300" height="100" viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="hull3h" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#7395ae;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#5a7d9a;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <!-- Hull principale -->
+    <rect x="5" y="5" width="290" height="90" rx="18" fill="url(#hull3h)" stroke="#2c3e50" stroke-width="4"/>
+    <!-- Deck -->
+    <rect x="15" y="15" width="270" height="70" rx="15" fill="#8b9dc3" stroke="#2c3e50" stroke-width="3"/>
+    <!-- Torre anteriore -->
+    <rect x="35" y="20" width="55" height="48" rx="5" fill="#607d8b" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Ponte anteriore -->
+    <rect x="45" y="15" width="35" height="22" rx="3" fill="#78909c" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Torre centrale -->
+    <rect x="120" y="25" width="50" height="43" rx="5" fill="#607d8b" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Ponte centrale -->
+    <rect x="130" y="20" width="34" height="20" rx="3" fill="#78909c" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Torre posteriore -->
+    <rect x="205" y="20" width="55" height="48" rx="5" fill="#607d8b" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Ponte posteriore -->
+    <rect x="215" y="15" width="35" height="22" rx="3" fill="#78909c" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Cannoni -->
+    <ellipse cx="67" cy="55" rx="12" ry="10" fill="#546e7a" stroke="#2c3e50" stroke-width="2"/>
+    <ellipse cx="145" cy="55" rx="12" ry="10" fill="#546e7a" stroke="#2c3e50" stroke-width="2"/>
+    <ellipse cx="232" cy="55" rx="12" ry="10" fill="#546e7a" stroke="#2c3e50" stroke-width="2"/>
+</svg>

@@ -1,0 +1,34 @@
+<svg width="400" height="100" viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="hull4h" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#7395ae;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#5a7d9a;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <!-- Hull principale -->
+    <rect x="5" y="5" width="390" height="90" rx="20" fill="url(#hull4h)" stroke="#2c3e50" stroke-width="4"/>
+    <!-- Deck -->
+    <rect x="15" y="15" width="370" height="70" rx="17" fill="#8b9dc3" stroke="#2c3e50" stroke-width="3"/>
+    <!-- Torre anteriore grande -->
+    <rect x="40" y="18" width="60" height="52" rx="6" fill="#607d8b" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Ponte anteriore -->
+    <rect x="52" y="13" width="36" height="25" rx="4" fill="#78909c" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Torre secondo -->
+    <rect x="135" y="23" width="55" height="47" rx="6" fill="#607d8b" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Ponte secondo -->
+    <rect x="145" y="18" width="35" height="23" rx="4" fill="#78909c" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Torre terzo -->
+    <rect x="225" y="23" width="55" height="47" rx="6" fill="#607d8b" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Ponte terzo -->
+    <rect x="235" y="18" width="35" height="23" rx="4" fill="#78909c" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Torre posteriore grande -->
+    <rect x="300" y="18" width="60" height="52" rx="6" fill="#607d8b" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Ponte posteriore -->
+    <rect x="312" y="13" width="36" height="25" rx="4" fill="#78909c" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Cannoni principali -->
+    <ellipse cx="70" cy="58" rx="14" ry="12" fill="#546e7a" stroke="#2c3e50" stroke-width="2"/>
+    <ellipse cx="330" cy="58" rx="14" ry="12" fill="#546e7a" stroke="#2c3e50" stroke-width="2"/>
+    <!-- Cannoni secondari -->
+    <circle cx="162" cy="58" r="10" fill="#546e7a" stroke="#2c3e50" stroke-width="2"/>
+    <circle cx="252" cy="58" r="10" fill="#546e7a" stroke="#2c3e50" stroke-width="2"/>
+</svg>

@@ -42,10 +42,14 @@ void fermaServerLogica() {
   _serverSocket?.close();
   _serverSocket = null;
 
-  for (var s in codaGiocatori) { s.close(); }
+  for (var s in codaGiocatori) {
+    try { s.close(); } catch (_) {}
+  }
   codaGiocatori.clear();
 
-  for (var s in inAttesaDiGiocare) { s.close(); }
+  for (var s in inAttesaDiGiocare) {
+    try { s.close(); } catch (_) {}
+  }
   inAttesaDiGiocare.clear();
 
   for (var p in partite) {
@@ -66,8 +70,6 @@ class Partita {
   String nick1 = "Giocatore 1";
   String nick2 = "Giocatore 2";
   StatoPartita stato = StatoPartita.attesaGiocatori;
-  bool g1Confermato = false;
-  bool g2Confermato = false;
   bool pos1Pronto = false;
   bool pos2Pronto = false;
   List<List<int>> navi1 = [];
@@ -92,13 +94,19 @@ void gestisciClient(Socket socket) {
         gestisciMessaggio(socket, line.trim());
       }
     },
-    onDone: () => gestisciDisconnessione(socket),
-    onError: (_) => gestisciDisconnessione(socket),
+    onDone: () {
+      print('Client disconnesso: ${socket.remoteAddress.address}');
+      gestisciDisconnessione(socket);
+    },
+    onError: (error) {
+      print('Errore client ${socket.remoteAddress.address}: $error');
+      gestisciDisconnessione(socket);
+    },
   );
 }
 
 void gestisciMessaggio(Socket socket, String messaggio) {
-  print('Ricevuto: $messaggio');
+  print('Ricevuto da ${socket.remoteAddress.address}: $messaggio');
   final parti = messaggio.split('|');
   final comando = parti[0];
 
@@ -123,75 +131,86 @@ void gestisciMessaggio(Socket socket, String messaggio) {
 }
 
 void gestisciJoin(Socket socket, String nickname) {
+  // Pulisci il socket da ogni stato precedente
+  pulisciSocket(socket);
+
   if (!codaGiocatori.contains(socket)) {
     codaGiocatori.add(socket);
     tempNicknames[socket] = nickname;
-    print("Giocatore $nickname aggiunto alla coda.");
+    print("Giocatore $nickname aggiunto alla coda. Totale in coda: ${codaGiocatori.length}");
   }
 
-  if (codaGiocatori.length >= 2) {
-    final g1 = codaGiocatori.removeAt(0);
-    final g2 = codaGiocatori.removeAt(0);
+  _inviaMsg(socket, 'ATTESA_GIOCATORE\n');
+}
+
+void gestisciGioca(Socket socket) {
+  print("Ricevuto GIOCA da ${tempNicknames[socket] ?? 'Unknown'}");
+
+  // Se il socket è già in una partita attiva, ignora
+  final partitaEsistente = trovaPartita(socket);
+  if (partitaEsistente != null && partitaEsistente.stato != StatoPartita.terminata) {
+    print("Socket già in una partita attiva, ignoro GIOCA");
+    return;
+  }
+
+  // Aggiungi a set di giocatori che vogliono giocare
+  if (!inAttesaDiGiocare.contains(socket)) {
+    inAttesaDiGiocare.add(socket);
+    print("Socket aggiunto a inAttesaDiGiocare. Totale: ${inAttesaDiGiocare.length}");
+  }
+
+  // Prova a creare partita se ci sono almeno 2 giocatori pronti
+  if (inAttesaDiGiocare.length >= 2) {
+    final giocatoriPronti = inAttesaDiGiocare.toList();
+
+    final g1 = giocatoriPronti[0];
+    final g2 = giocatoriPronti[1];
+
+    if (!codaGiocatori.contains(g1) || !codaGiocatori.contains(g2)) {
+      print("Uno dei giocatori non è più in coda, pulizia necessaria");
+      pulisciSocket(g1);
+      pulisciSocket(g2);
+      return;
+    }
+
+    // Rimuovi da tutte le code
+    inAttesaDiGiocare.remove(g1);
+    inAttesaDiGiocare.remove(g2);
+    codaGiocatori.remove(g1);
+    codaGiocatori.remove(g2);
+
+    // Crea nuova partita
     final p = Partita(g1, g2);
     p.nick1 = tempNicknames[g1] ?? "G1";
     p.nick2 = tempNicknames[g2] ?? "G2";
+
+    // Rimuovi i nickname temporanei
     tempNicknames.remove(g1);
     tempNicknames.remove(g2);
-
-    if (inAttesaDiGiocare.contains(g1)) {
-      p.g1Confermato = true;
-      inAttesaDiGiocare.remove(g1);
-    }
-    if (inAttesaDiGiocare.contains(g2)) {
-      p.g2Confermato = true;
-      inAttesaDiGiocare.remove(g2);
-    }
 
     partite.add(p);
     print("Partita creata: ${p.nick1} vs ${p.nick2}");
 
-    if (p.g1Confermato && p.g2Confermato) {
-      avviaPosizionamento(p);
-    } else {
-      g1.write('ATTESA_GIOCATORE\n');
-      g2.write('ATTESA_GIOCATORE\n');
-    }
+    avviaPosizionamento(p);
   } else {
-    socket.write('ATTESA_GIOCATORE\n');
-  }
-}
-
-void gestisciGioca(Socket socket) {
-  final partita = trovaPartita(socket);
-
-  if (partita == null) {
-    if (codaGiocatori.contains(socket)) {
-      inAttesaDiGiocare.add(socket);
-      print("Giocatore in coda ha premuto GIOCA. In attesa di avversario.");
-    }
-    socket.write('ATTESA_GIOCATORE\n');
-    return;
-  }
-
-  if (socket == partita.giocatore1) partita.g1Confermato = true;
-  else partita.g2Confermato = true;
-
-  if (partita.g1Confermato && partita.g2Confermato) {
-    avviaPosizionamento(partita);
-  } else {
-    socket.write('ATTESA_GIOCATORE\n');
+    _inviaMsg(socket, 'ATTESA_GIOCATORE\n');
+    print("In attesa di altro giocatore. Attuali: ${inAttesaDiGiocare.length}");
   }
 }
 
 void avviaPosizionamento(Partita partita) {
   partita.stato = StatoPartita.posizionamento;
-  partita.giocatore1.write('START_POS\n');
-  partita.giocatore2.write('START_POS\n');
+  _inviaMsg(partita.giocatore1, 'START_POS\n');
+  _inviaMsg(partita.giocatore2, 'START_POS\n');
+  print("Posizionamento avviato per partita ${partita.nick1} vs ${partita.nick2}");
 }
 
 void riceviPosizioni(Socket socket, String json) {
   final partita = trovaPartita(socket);
-  if (partita == null) return;
+  if (partita == null) {
+    print("ERRORE: Posizioni ricevute ma partita non trovata");
+    return;
+  }
 
   try {
     final List<dynamic> dati = jsonDecode(json);
@@ -200,25 +219,34 @@ void riceviPosizioni(Socket socket, String json) {
     if (socket == partita.giocatore1) {
       partita.navi1 = navi;
       partita.pos1Pronto = true;
+      print("Posizioni ricevute da ${partita.nick1}");
     } else {
       partita.navi2 = navi;
       partita.pos2Pronto = true;
+      print("Posizioni ricevute da ${partita.nick2}");
     }
 
     if (partita.pos1Pronto && partita.pos2Pronto) {
       partita.stato = StatoPartita.inGioco;
-      partita.turno = 1;
+      partita.turno = 1; // Giocatore 1 inizia SEMPRE
 
+      print("*** GIOCO AVVIATO: ${partita.nick1} (G1, turno=1) vs ${partita.nick2} (G2, turno=2) ***");
+      print("*** Primo turno: ${partita.nick1} ***");
+
+      // Invia messaggi di inizio gioco
       _inviaJson(partita.giocatore1, {
         "tipo": "START_GIOCO",
-        "mioTurno": true,
+        "mioTurno": true,  // Giocatore 1 inizia
         "avversario": partita.nick2
       });
+
       _inviaJson(partita.giocatore2, {
         "tipo": "START_GIOCO",
-        "mioTurno": false,
+        "mioTurno": false, // Giocatore 2 aspetta
         "avversario": partita.nick1
       });
+
+      print("Messaggi START_GIOCO inviati");
     }
   } catch (e) {
     print("Errore ricezione posizioni: $e");
@@ -227,13 +255,31 @@ void riceviPosizioni(Socket socket, String json) {
 
 void spara(Socket socket, int cella) {
   final partita = trovaPartita(socket);
-  if (partita == null || partita.stato != StatoPartita.inGioco) return;
+  if (partita == null) {
+    print("ERRORE: Spara ma partita non trovata");
+    return;
+  }
+
+  if (partita.stato != StatoPartita.inGioco) {
+    print("ERRORE: Spara ma partita non in gioco (stato: ${partita.stato})");
+    return;
+  }
 
   final idx = partita.indice(socket);
-  if (partita.turno != idx) return;
+  print("Sparo ricevuto da giocatore $idx (turno corrente: ${partita.turno})");
+
+  if (partita.turno != idx) {
+    print("ERRORE: Non è il turno di questo giocatore! Turno=${partita.turno}, Player=$idx");
+    // Reinvia lo stato corretto
+    _inviaJson(socket, {"tipo": "TURNO", "mioTurno": false});
+    return;
+  }
 
   final colpiEffettuati = idx == 1 ? partita.colpi1 : partita.colpi2;
-  if (colpiEffettuati.contains(cella)) return;
+  if (colpiEffettuati.contains(cella)) {
+    print("ERRORE: Cella $cella già colpita");
+    return;
+  }
   colpiEffettuati.add(cella);
 
   final naviAvversario = idx == 1 ? partita.navi2 : partita.navi1;
@@ -250,12 +296,15 @@ void spara(Socket socket, int cella) {
     }
   }
 
+  print("Risultato sparo cella $cella: ${colpito ? 'COLPITO' : 'ACQUA'}");
+
   _inviaJson(socket, {"tipo": "RISULTATO", "hit": colpito, "cella": cella});
   _inviaJson(socketAvversario, {"tipo": "SUBITO", "hit": colpito, "cella": cella});
 
   if (colpito) {
     final affondata = naveColpita!.every((c) => colpiEffettuati.contains(c));
     if (affondata) {
+      print("Nave affondata!");
       naviAvversario.remove(naveColpita);
       _inviaJson(socket, {"tipo": "AFFONDATA", "celle": naveColpita});
       _inviaJson(socketAvversario, {"tipo": "PERSA", "celle": naveColpita});
@@ -264,32 +313,66 @@ void spara(Socket socket, int cella) {
         partita.stato = StatoPartita.terminata;
         _inviaJson(socket, {"tipo": "VITTORIA"});
         _inviaJson(socketAvversario, {"tipo": "SCONFITTA"});
+        print("*** PARTITA TERMINATA: Vince ${idx == 1 ? partita.nick1 : partita.nick2} ***");
+
+        Future.delayed(const Duration(seconds: 2), () {
+          partite.remove(partita);
+          print("Partita rimossa dal server");
+        });
         return;
       }
     }
+    // Colpito: giocatore mantiene il turno
+    print("Colpito! ${idx == 1 ? partita.nick1 : partita.nick2} gioca ancora");
     _inviaJson(socket, {"tipo": "TURNO", "mioTurno": true});
     _inviaJson(socketAvversario, {"tipo": "TURNO", "mioTurno": false});
   } else {
+    // Acqua: turno passa all'avversario
     partita.turno = idx == 1 ? 2 : 1;
+    print("Acqua! Turno passa a ${partita.turno == 1 ? partita.nick1 : partita.nick2}");
     _inviaJson(socket, {"tipo": "TURNO", "mioTurno": false});
     _inviaJson(socketAvversario, {"tipo": "TURNO", "mioTurno": true});
   }
 }
 
 void gestisciDisconnessione(Socket socket) {
-  if (codaGiocatori.contains(socket)) codaGiocatori.remove(socket);
-  if (inAttesaDiGiocare.contains(socket)) inAttesaDiGiocare.remove(socket);
-  tempNicknames.remove(socket);
+  print("*** Gestione disconnessione per ${socket.remoteAddress.address} ***");
+
+  pulisciSocket(socket);
 
   final partita = trovaPartita(socket);
   if (partita != null) {
+    print("Socket era in una partita, notifico avversario");
     final avv = partita.avversario(socket);
     try {
       _inviaJson(avv, {"tipo": "AVVERSARIO_USCITO"});
-    } catch (_) {}
+    } catch (e) {
+      print("Errore notifica avversario: $e");
+    }
     partite.remove(partita);
+    print("Partita rimossa a causa di disconnessione");
   }
-  try { socket.close(); } catch (_) {}
+
+  try {
+    socket.close();
+  } catch (e) {
+    print("Errore chiusura socket: $e");
+  }
+}
+
+void pulisciSocket(Socket socket) {
+  if (codaGiocatori.contains(socket)) {
+    codaGiocatori.remove(socket);
+    print("Socket rimosso da codaGiocatori");
+  }
+  if (inAttesaDiGiocare.contains(socket)) {
+    inAttesaDiGiocare.remove(socket);
+    print("Socket rimosso da inAttesaDiGiocare");
+  }
+  if (tempNicknames.containsKey(socket)) {
+    tempNicknames.remove(socket);
+    print("Nickname temporaneo rimosso");
+  }
 }
 
 Partita? trovaPartita(Socket s) {
@@ -301,8 +384,27 @@ Partita? trovaPartita(Socket s) {
 
 void _inviaJson(Socket s, Map<String, dynamic> data) {
   try {
-    s.write('${jsonEncode(data)}\n');
-  } catch (_) {}
+    final jsonString = jsonEncode(data);
+    if (jsonString.isNotEmpty && jsonString != 'null') {
+      s.write('$jsonString\n');
+      s.flush();
+      print("Inviato JSON a ${s.remoteAddress.address}: $jsonString");
+    }
+  } catch (e) {
+    print('Errore invio JSON: $e');
+  }
+}
+
+void _inviaMsg(Socket s, String msg) {
+  try {
+    if (msg.trim().isNotEmpty) {
+      s.write(msg);
+      s.flush();
+      print("Inviato MSG a ${s.remoteAddress.address}: ${msg.trim()}");
+    }
+  } catch (e) {
+    print('Errore invio messaggio: $e');
+  }
 }
 
 // --- BACKGROUND SERVICE ---
@@ -366,13 +468,12 @@ void onStart(ServiceInstance service) async {
     return;
   }
 
-  // ✅ TIMER CORRETTO - UNA SOLA VOLTA
   Timer.periodic(const Duration(seconds: 1), (Timer timer) async {
     if (service is AndroidServiceInstance) {
       if (await service.isForegroundService()) {
         service.setForegroundNotificationInfo(
           title: "Battaglia Navale Server",
-          content: "Attivo - ${partite.length} partite in corso",
+          content: "Attivo - ${partite.length} partite | ${codaGiocatori.length} in coda",
         );
       }
     }
