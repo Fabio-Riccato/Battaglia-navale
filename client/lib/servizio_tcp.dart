@@ -4,6 +4,7 @@ import 'dart:io';
 
 class ServizioTCP {
   Socket? socket;
+  String _bufferInIngresso = "";
 
   // Dati giocatore
   String mioNickname = "";
@@ -19,11 +20,16 @@ class ServizioTCP {
       socket = await Socket.connect(ip, porta).timeout(const Duration(seconds: 5));
 
       socket!.listen(
-            (data) {
-          final messaggioCompleto = utf8.decode(data);
-          for (final line in messaggioCompleto.split('\n')) {
-            if (line.trim().isEmpty) continue;
-            _gestisciMessaggio(line.trim());
+        (data) {
+          _bufferInIngresso += utf8.decode(data);
+
+          final righe = _bufferInIngresso.split('\n');
+          _bufferInIngresso = righe.removeLast();
+
+          for (final line in righe) {
+            final messaggio = line.trim();
+            if (messaggio.isEmpty) continue;
+            _gestisciMessaggio(messaggio);
           }
         },
         onError: (e) {
@@ -79,6 +85,7 @@ class ServizioTCP {
     try {
       socket?.write('ESCI\n');
       socket?.destroy();
+      _bufferInIngresso = "";
     } catch (e) {
       print("Errore durante abbandono: $e");
     }
@@ -92,7 +99,6 @@ class ServizioTCP {
     return false;
   }
 }
-
 
 
 

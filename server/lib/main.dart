@@ -21,6 +21,7 @@ final List<Socket> codaGiocatori = [];
 final Set<Socket> inAttesaDiGiocare = {};
 final List<Partita> partite = [];
 final Map<Socket, String> tempNicknames = {};
+final Map<Socket, String> bufferInIngresso = {};
 
 Future<void> avviaServerLogica() async {
   if (_serverSocket != null) return;
@@ -58,6 +59,7 @@ void fermaServerLogica() {
   }
   partite.clear();
   tempNicknames.clear();
+  bufferInIngresso.clear();
 
   print("Server spento e connessioni chiuse.");
 }
@@ -86,12 +88,19 @@ class Partita {
 }
 
 void gestisciClient(Socket socket) {
+  bufferInIngresso[socket] = "";
+
   socket.listen(
-        (data) {
-      final messaggioCompleto = utf8.decode(data);
-      for (final line in messaggioCompleto.split('\n')) {
-        if (line.trim().isEmpty) continue;
-        gestisciMessaggio(socket, line.trim());
+    (data) {
+      bufferInIngresso[socket] = (bufferInIngresso[socket] ?? "") + utf8.decode(data);
+
+      final righe = bufferInIngresso[socket]!.split('\n');
+      bufferInIngresso[socket] = righe.removeLast();
+
+      for (final line in righe) {
+        final messaggio = line.trim();
+        if (messaggio.isEmpty) continue;
+        gestisciMessaggio(socket, messaggio);
       }
     },
     onDone: () {
@@ -322,17 +331,13 @@ void spara(Socket socket, int cella) {
         return;
       }
     }
-    // Colpito: giocatore mantiene il turno
-    print("Colpito! ${idx == 1 ? partita.nick1 : partita.nick2} gioca ancora");
-    _inviaJson(socket, {"tipo": "TURNO", "mioTurno": true});
-    _inviaJson(socketAvversario, {"tipo": "TURNO", "mioTurno": false});
-  } else {
-    // Acqua: turno passa all'avversario
-    partita.turno = idx == 1 ? 2 : 1;
-    print("Acqua! Turno passa a ${partita.turno == 1 ? partita.nick1 : partita.nick2}");
-    _inviaJson(socket, {"tipo": "TURNO", "mioTurno": false});
-    _inviaJson(socketAvversario, {"tipo": "TURNO", "mioTurno": true});
   }
+
+  // Dopo ogni sparo valido il turno passa all'avversario.
+  partita.turno = idx == 1 ? 2 : 1;
+  print("Turno passato a ${partita.turno == 1 ? partita.nick1 : partita.nick2}");
+  _inviaJson(socket, {"tipo": "TURNO", "mioTurno": false});
+  _inviaJson(socketAvversario, {"tipo": "TURNO", "mioTurno": true});
 }
 
 void gestisciDisconnessione(Socket socket) {
@@ -372,6 +377,10 @@ void pulisciSocket(Socket socket) {
   if (tempNicknames.containsKey(socket)) {
     tempNicknames.remove(socket);
     print("Nickname temporaneo rimosso");
+  }
+  if (bufferInIngresso.containsKey(socket)) {
+    bufferInIngresso.remove(socket);
+    print("Buffer ingresso rimosso");
   }
 }
 
