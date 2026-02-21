@@ -331,17 +331,13 @@ void spara(Socket socket, int cella) {
         return;
       }
     }
-    // Colpito: giocatore mantiene il turno
-    print("Colpito! ${idx == 1 ? partita.nick1 : partita.nick2} gioca ancora");
-    _inviaJson(socket, {"tipo": "TURNO", "mioTurno": true});
-    _inviaJson(socketAvversario, {"tipo": "TURNO", "mioTurno": false});
-  } else {
-    // Acqua: turno passa all'avversario
-    partita.turno = idx == 1 ? 2 : 1;
-    print("Acqua! Turno passa a ${partita.turno == 1 ? partita.nick1 : partita.nick2}");
-    _inviaJson(socket, {"tipo": "TURNO", "mioTurno": false});
-    _inviaJson(socketAvversario, {"tipo": "TURNO", "mioTurno": true});
   }
+
+  // Dopo ogni sparo valido il turno passa all'avversario.
+  partita.turno = idx == 1 ? 2 : 1;
+  print("Turno passato a ${partita.turno == 1 ? partita.nick1 : partita.nick2}");
+  _inviaJson(socket, {"tipo": "TURNO", "mioTurno": false});
+  _inviaJson(socketAvversario, {"tipo": "TURNO", "mioTurno": true});
 }
 
 void gestisciDisconnessione(Socket socket) {
