@@ -1,16 +1,23 @@
-# server
+# Server - Battaglia Navale
 
-Server di battaglia navale
+Applicazione Flutter che ospita la logica server della partita.
 
-## Getting Started
+## Requisiti
+- Flutter SDK installato
+- Dart incluso in Flutter
 
-This project is a starting point for a Flutter application.
+## Avvio
+```bash
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Verifiche
+```bash
+flutter analyze
+flutter test
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Note
+Questo progetto è parte del monorepo `Battaglia-navale` insieme a `client/`.
+Se client e server hanno vincoli SDK diversi, usa una versione Flutter che soddisfi entrambi oppure allinea i vincoli nei rispettivi `pubspec.yaml`.
