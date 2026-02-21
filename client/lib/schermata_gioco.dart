@@ -29,6 +29,7 @@ class _SchermataGiocoState extends State<SchermataGioco>
 
   Set<int> naviAffondateAvversario = {};
   Set<int> mieNaviAffondate = {};
+  List<List<int>> naviAffondateAvversarioDettagli = [];
 
   late AnimationController _turnoController;
   late Animation<Color?> _turnoColorAnimation;
@@ -101,10 +102,19 @@ class _SchermataGiocoState extends State<SchermataGioco>
             }
             break;
           case 'AFFONDATA':
-            naviAffondateAvversario.addAll((msg['celle'] as List).cast<int>());
+            final celleAffondate = (msg['celle'] as List).cast<int>();
+            naviAffondateAvversario.addAll(celleAffondate);
+            naviAffondateAvversarioDettagli.add(List<int>.from(celleAffondate));
+            for (final cella in celleAffondate) {
+              _playExplosion(cella);
+            }
             break;
           case 'PERSA':
-            mieNaviAffondate.addAll((msg['celle'] as List).cast<int>());
+            final cellePerse = (msg['celle'] as List).cast<int>();
+            mieNaviAffondate.addAll(cellePerse);
+            for (final cella in cellePerse) {
+              _playExplosion(cella);
+            }
             break;
           case 'VITTORIA':
             _mostraPopupFine(
@@ -615,47 +625,20 @@ class _SchermataGiocoState extends State<SchermataGioco>
       }
     }
 
-    // Trova le navi affondate dell'avversario raggruppate
+    // Trova le navi affondate dell'avversario usando i dettagli ricevuti dal server
     Map<int, List<Map<String, dynamic>>> naviAffondatePerDimensione = {};
     if (!isDifesa) {
-      Set<int> processate = {};
-      for (int cella in naviAffondateAvversario) {
-        if (processate.contains(cella)) continue;
+      for (final nave in naviAffondateAvversarioDettagli) {
+        if (nave.isEmpty) continue;
 
-        List<int> naveCorrente = [cella];
-        processate.add(cella);
+        final naveOrdinata = [...nave]..sort();
+        final dim = naveOrdinata.length;
+        final isVert = naveOrdinata.length > 1 &&
+            naveOrdinata[1] == naveOrdinata.first + 10;
 
-        int row = cella ~/ 10;
-        int col = cella % 10;
-
-        for (int c = col + 1; c < 10; c++) {
-          int next = row * 10 + c;
-          if (naviAffondateAvversario.contains(next)) {
-            naveCorrente.add(next);
-            processate.add(next);
-          } else {
-            break;
-          }
-        }
-
-        bool isVert = false;
-        if (naveCorrente.length == 1) {
-          for (int r = row + 1; r < 10; r++) {
-            int next = r * 10 + col;
-            if (naviAffondateAvversario.contains(next)) {
-              naveCorrente.add(next);
-              processate.add(next);
-              isVert = true;
-            } else {
-              break;
-            }
-          }
-        }
-
-        int dim = naveCorrente.length;
         naviAffondatePerDimensione.putIfAbsent(dim, () => []);
         naviAffondatePerDimensione[dim]!.add({
-          'celle': naveCorrente,
+          'celle': naveOrdinata,
           'isVertical': isVert,
         });
       }
@@ -778,17 +761,17 @@ class _SchermataGiocoState extends State<SchermataGioco>
                             width: width,
                             height: height,
                             child: Opacity(
-                              opacity: isAffondata ? 0.5 : 1.0,
+                              opacity: 1.0,
                               child: ColorFiltered(
                                 colorFilter: isAffondata
                                     ? const ColorFilter.mode(
-                                  Colors.grey,
-                                  BlendMode.saturation,
-                                )
+                                        Colors.red,
+                                        BlendMode.modulate,
+                                      )
                                     : const ColorFilter.mode(
-                                  Colors.transparent,
-                                  BlendMode.multiply,
-                                ),
+                                        Colors.transparent,
+                                        BlendMode.multiply,
+                                      ),
                                 child: SvgPicture.asset(
                                   _getShipAsset(dim, isVert),
                                   fit: BoxFit.fill,
@@ -823,11 +806,11 @@ class _SchermataGiocoState extends State<SchermataGioco>
                             width: width,
                             height: height,
                             child: Opacity(
-                              opacity: 0.7,
+                              opacity: 0.9,
                               child: ColorFiltered(
                                 colorFilter: const ColorFilter.mode(
-                                  Colors.grey,
-                                  BlendMode.saturation,
+                                  Colors.green,
+                                  BlendMode.modulate,
                                 ),
                                 child: SvgPicture.asset(
                                   _getShipAsset(dim, isVert),
